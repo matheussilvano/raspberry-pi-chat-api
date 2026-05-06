@@ -25,7 +25,7 @@ async def upload_photo(image_base64: str = Form(...), metadata: str = Form(...),
     except json.JSONDecodeError:
         raise HTTPException(status_code=400, detail="Invalid metadata JSON")
 
-    photo = Photo(image_base64=image_base64, metadata=metadata_dict)
+    photo = Photo(image_base64=image_base64, photo_metadata=metadata_dict)
     db.add(photo)
     db.commit()
     db.refresh(photo)
@@ -99,7 +99,7 @@ async def get_photos(db: Session = Depends(get_db)):
     Get all uploaded photos.
     """
     photos = db.query(Photo).all()
-    return [{"id": p.id, "metadata": p.metadata, "created_at": p.created_at} for p in photos]
+    return [{"id": p.id, "photo_metadata": p.photo_metadata, "created_at": p.created_at} for p in photos]
 
 @app.get("/faces")
 async def get_faces(db: Session = Depends(get_db)):

@@ -8,7 +8,7 @@ class Photo(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     image_base64 = Column(Text, nullable=False)
-    metadata = Column(JSON, nullable=False)  # e.g., {"timestamp": "2023-10-01T12:00:00", "location": "door"}
+    photo_metadata = Column(JSON, nullable=False)  # e.g., {"timestamp": "2023-10-01T12:00:00", "location": "door"}
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
 class Face(Base):
