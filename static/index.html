@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Raspberry Pi Face Dashboard | Matheus Silvano Pereira</title>
+  <link rel="stylesheet" href="/static/styles.css" />
+  <style>
+    .identity, .course { margin: 0; }
+  </style>
+</head>
+<body>
+  <div class="background-orb orb-one"></div>
+  <div class="background-orb orb-two"></div>
+
+  <main class="shell">
+    <section class="hero card">
+      <div>
+        <p class="eyebrow">Raspberry Pi Face Dashboard</p>
+        <p class="identity">Matheus Silvano Pereira</p>
+        <p class="course">Disciplina de Sistemas Móveis e Embarcados</p>
+        <h1>Captura, cadastro e reconhecimento em uma tela simples.</h1>
+        <p class="lede">Envie uma foto da Raspberry, veja quem foi identificado e acompanhe o histórico de eventos sem sair do navegador.</p>
+      </div>
+      <div class="hero-actions">
+        <button id="refreshAllBtn" class="button secondary" type="button">Atualizar tudo</button>
+        <span class="status-pill">API ativa</span>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="card panel panel-accent">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Captura da Rasp</p>
+            <h2>Enviar foto para reconhecer</h2>
+          </div>
+          <span class="mini-badge">/recognize_face</span>
+        </div>
+
+        <form id="recognizeForm" class="stacked-form">
+          <label class="field">
+            <span>Foto</span>
+            <input id="recognizeImage" type="file" accept="image/*" required />
+          </label>
+          <button class="button primary" type="submit">Enviar captura</button>
+        </form>
+
+        <div class="preview-wrap">
+          <img id="recognizePreview" class="preview hidden" alt="Pré-visualização da captura" />
+        </div>
+
+        <div class="result-box" id="recognitionResult">
+          <p class="muted">Nenhuma captura enviada ainda.</p>
+        </div>
+      </article>
+
+      <article class="card panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Cadastro de faces</p>
+            <h2>Adicionar uma pessoa</h2>
+          </div>
+          <span class="mini-badge">/register_face</span>
+        </div>
+
+        <form id="registerForm" class="stacked-form">
+          <label class="field">
+            <span>Nome</span>
+            <input id="faceName" type="text" placeholder="Ex: Ana" required />
+          </label>
+          <label class="field">
+            <span>Foto do rosto</span>
+            <input id="registerImage" type="file" accept="image/*" required />
+          </label>
+          <button class="button primary" type="submit">Cadastrar face</button>
+        </form>
+
+        <div class="preview-wrap">
+          <img id="registerPreview" class="preview hidden" alt="Pré-visualização do cadastro" />
+        </div>
+
+        <div class="result-box compact" id="registerResult">
+          <p class="muted">Cadastre um rosto para começar.</p>
+        </div>
+      </article>
+
+      <article class="card panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Resumo atual</p>
+            <h2>Último reconhecimento</h2>
+          </div>
+          <span class="mini-badge">/recognitions</span>
+        </div>
+
+        <div class="summary-grid">
+          <div class="summary-item">
+            <span class="label">Mensagem</span>
+            <strong id="latestMessage">-</strong>
+          </div>
+          <div class="summary-item">
+            <span class="label">Foto</span>
+            <strong id="latestPhotoLabel">-</strong>
+          </div>
+        </div>
+
+        <div class="preview-wrap">
+          <img id="latestPhoto" class="preview hidden" alt="Última foto reconhecida" />
+        </div>
+
+        <div id="latestFaces" class="faces-list empty-state">
+          Nenhum evento processado ainda.
+        </div>
+      </article>
+
+      <article class="card panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Histórico</p>
+            <h2>Eventos e fotos recentes</h2>
+          </div>
+          <span class="mini-badge">timeline</span>
+        </div>
+
+        <div class="history-tabs">
+          <button class="tab active" data-tab="recognitions" type="button">Reconhecimentos</button>
+          <button class="tab" data-tab="photos" type="button">Fotos</button>
+          <button class="tab" data-tab="faces" type="button">Faces</button>
+        </div>
+
+        <div id="historyRecognitions" class="history-list"></div>
+        <div id="historyPhotos" class="history-list hidden"></div>
+        <div id="historyFaces" class="history-list hidden"></div>
+      </article>
+    </section>
+  </main>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

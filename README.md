@@ -7,6 +7,7 @@ This is a FastAPI application for handling photos from a Raspberry Pi, including
 - Upload photos with base64 encoding and metadata
 - Register faces for recognition
 - Recognize faces in uploaded images
+- Simple web dashboard for capture, registration, recognition, and history
 - Automatic Swagger documentation at `/docs`
 
 ## Setup
@@ -28,16 +29,25 @@ This is a FastAPI application for handling photos from a Raspberry Pi, including
    uvicorn main:app --reload
    ```
 
-5. Access the API documentation at `http://localhost:8000/docs`
+5. Open the dashboard at `http://localhost:8000/`
+
+6. Access the API documentation at `http://localhost:8000/docs`
 
 ## Endpoints
 
 - `POST /upload_photo`: Upload a photo with base64 image and JSON metadata.
 - `POST /register_face`: Register a face by uploading an image.
-- `POST /recognize_face`: Recognize faces in an uploaded image.
+- `POST /recognize_face`: Recognize faces in an uploaded image and return a status message for each detected face.
 - `GET /photos`: Retrieve all uploaded photos.
 - `GET /faces`: Retrieve all registered faces.
+- `GET /recognitions`: Retrieve recognition history.
 
 ## Usage with Raspberry Pi
 
 The Raspberry Pi can send POST requests to `/upload_photo` with the photo in base64 and metadata like timestamp and event type.
+
+The `/recognize_face` response now includes:
+
+- `message`: summary for the whole image.
+- `faces`: one entry per detected face, with `status`, `message`, and optionally `name` and `confidence`.
+- `recognized`: only the faces that matched a registered person.

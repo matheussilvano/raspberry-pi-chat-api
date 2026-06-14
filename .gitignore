@@ -1,0 +1,14 @@
+__pycache__/
+*.py[cod]
+.env
+.venv/
+venv/
+test.db
+
+node_modules/
+.expo/
+dist/
+build/
+android/.gradle/
+android/app/build/
+android/build/
