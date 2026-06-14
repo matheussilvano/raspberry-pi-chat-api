@@ -1,0 +1,29 @@
+{
+  "expo": {
+    "name": "Raspberry Pi Face",
+    "slug": "raspberry-pi-face",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "android": {
+      "package": "com.matheussilvano.raspberrypiface",
+      "permissions": [
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "READ_EXTERNAL_STORAGE"
+      ]
+    },
+    "plugins": [
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Selecione fotos para cadastrar e reconhecer pessoas.",
+          "cameraPermission": "Use a camera para capturar fotos e reconhecer pessoas."
+        }
+      ]
+    ]
+  }
+}

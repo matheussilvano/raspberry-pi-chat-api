@@ -8,6 +8,7 @@ This is a FastAPI application for handling photos from a Raspberry Pi, including
 - Register faces for recognition
 - Recognize faces in uploaded images
 - Simple web dashboard for capture, registration, recognition, and history
+- Android app is available on the `mobile/android-app` branch under `mobile/`
 - Automatic Swagger documentation at `/docs`
 
 ## Setup
