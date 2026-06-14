@@ -23,7 +23,8 @@
           "photosPermission": "Selecione fotos para cadastrar e reconhecer pessoas.",
           "cameraPermission": "Use a camera para capturar fotos e reconhecer pessoas."
         }
-      ]
+      ],
+      "expo-font"
     ]
   }
 }
