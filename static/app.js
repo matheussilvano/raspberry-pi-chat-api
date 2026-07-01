@@ -14,6 +14,8 @@ const latestFaces = document.getElementById('latestFaces');
 const historyRecognitions = document.getElementById('historyRecognitions');
 const historyPhotos = document.getElementById('historyPhotos');
 const historyFaces = document.getElementById('historyFaces');
+const recognitionChart = document.getElementById('recognitionChart');
+const chartSummary = document.getElementById('chartSummary');
 const tabs = document.querySelectorAll('.tab');
 
 const state = {
@@ -72,6 +74,150 @@ function faceLabel(face) {
     return `<span class="face-tag">Pessoa identificada: ${escapeHtml(face.name)}</span>`;
   }
   return `<span class="face-tag unrecognized">Tem uma pessoa, mas nao identifiquei</span>`;
+}
+
+function getLastSevenDays() {
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = new Date();
+    date.setHours(0, 0, 0, 0);
+    date.setDate(date.getDate() - (6 - index));
+    return date;
+  });
+}
+
+function formatDayKey(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
+function getRecognitionStats() {
+  const days = getLastSevenDays();
+  const buckets = days.map((date) => ({
+    key: formatDayKey(date),
+    label: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+    recognized: 0,
+    unrecognized: 0,
+  }));
+  const bucketByKey = new Map(buckets.map((bucket) => [bucket.key, bucket]));
+  const totals = { events: 0, recognized: 0, unrecognized: 0 };
+
+  state.recognitions.forEach((event) => {
+    const date = new Date(event.created_at);
+    if (Number.isNaN(date.getTime())) return;
+
+    const key = formatDayKey(date);
+    const bucket = bucketByKey.get(key);
+    if (!bucket) return;
+
+    const faces = event.recognition_result?.faces || [];
+    const recognizedCount = faces.filter((face) => face.status === 'recognized').length;
+    const unrecognizedCount = faces.filter((face) => face.status !== 'recognized').length;
+    const hasNoFace = faces.length === 0 ? 1 : 0;
+
+    bucket.recognized += recognizedCount;
+    bucket.unrecognized += unrecognizedCount + hasNoFace;
+    totals.events += 1;
+    totals.recognized += recognizedCount;
+    totals.unrecognized += unrecognizedCount + hasNoFace;
+  });
+
+  return { buckets, totals };
+}
+
+function renderChartSummary(totals) {
+  chartSummary.innerHTML = `
+    <div class="summary-item">
+      <span class="label">Eventos</span>
+      <strong>${totals.events}</strong>
+    </div>
+    <div class="summary-item">
+      <span class="label">Pessoas identificadas</span>
+      <strong>${totals.recognized}</strong>
+    </div>
+    <div class="summary-item">
+      <span class="label">Não identificados</span>
+      <strong>${totals.unrecognized}</strong>
+    </div>
+  `;
+}
+
+function drawRecognitionChart(buckets) {
+  const canvas = recognitionChart;
+  const context = canvas.getContext('2d');
+  const rect = canvas.getBoundingClientRect();
+  const ratio = window.devicePixelRatio || 1;
+  const width = Math.max(320, rect.width);
+  const height = Math.max(220, rect.height);
+
+  canvas.width = Math.round(width * ratio);
+  canvas.height = Math.round(height * ratio);
+  context.setTransform(ratio, 0, 0, ratio, 0, 0);
+  context.clearRect(0, 0, width, height);
+
+  const padding = { top: 18, right: 16, bottom: 42, left: 34 };
+  const chartWidth = width - padding.left - padding.right;
+  const chartHeight = height - padding.top - padding.bottom;
+  const dataMax = Math.max(0, ...buckets.map((bucket) => bucket.recognized + bucket.unrecognized));
+  const maxValue = Math.max(1, dataMax);
+  const yValues = dataMax <= 1
+    ? [0, 1]
+    : Array.from({ length: Math.min(5, dataMax + 1) }, (_, index) => Math.round((dataMax / Math.min(4, dataMax)) * index));
+  const barGap = Math.min(18, chartWidth / 22);
+  const barWidth = Math.max(18, (chartWidth - barGap * (buckets.length - 1)) / buckets.length);
+
+  context.strokeStyle = 'rgba(24, 32, 51, 0.1)';
+  context.lineWidth = 1;
+  context.font = '12px "Plus Jakarta Sans", sans-serif';
+  context.fillStyle = '#667085';
+  context.textAlign = 'right';
+  context.textBaseline = 'middle';
+
+  yValues.forEach((value) => {
+    const y = padding.top + chartHeight - (chartHeight * value) / maxValue;
+    context.beginPath();
+    context.moveTo(padding.left, y);
+    context.lineTo(width - padding.right, y);
+    context.stroke();
+    context.fillText(value, padding.left - 8, y);
+  });
+
+  buckets.forEach((bucket, index) => {
+    const total = bucket.recognized + bucket.unrecognized;
+    const x = padding.left + index * (barWidth + barGap);
+    const baseY = padding.top + chartHeight;
+    const recognizedHeight = (bucket.recognized / maxValue) * chartHeight;
+    const unrecognizedHeight = (bucket.unrecognized / maxValue) * chartHeight;
+
+    context.fillStyle = 'rgba(12, 128, 120, 0.18)';
+    context.fillRect(x, padding.top, barWidth, chartHeight);
+
+    context.fillStyle = '#d84c5f';
+    context.fillRect(x, baseY - unrecognizedHeight, barWidth, unrecognizedHeight);
+
+    context.fillStyle = '#0c8078';
+    context.fillRect(x, baseY - unrecognizedHeight - recognizedHeight, barWidth, recognizedHeight);
+
+    if (total > 0) {
+      context.fillStyle = '#182033';
+      context.textAlign = 'center';
+      context.textBaseline = 'bottom';
+      context.font = '700 12px "Plus Jakarta Sans", sans-serif';
+      context.fillText(total, x + barWidth / 2, baseY - unrecognizedHeight - recognizedHeight - 6);
+    }
+
+    context.fillStyle = '#667085';
+    context.textBaseline = 'top';
+    context.font = '12px "Plus Jakarta Sans", sans-serif';
+    context.fillText(bucket.label, x + barWidth / 2, baseY + 12);
+  });
+}
+
+function renderDashboardChart() {
+  const { buckets, totals } = getRecognitionStats();
+  renderChartSummary(totals);
+  drawRecognitionChart(buckets);
 }
 
 function renderLatestRecognition() {
@@ -168,6 +314,7 @@ async function loadData() {
 
   renderLatestRecognition();
   renderHistory();
+  renderDashboardChart();
 }
 
 async function submitImage(formData, endpoint) {
@@ -240,6 +387,10 @@ registerForm.addEventListener('submit', async (event) => {
 });
 
 refreshAllBtn.addEventListener('click', loadData);
+
+window.addEventListener('resize', () => {
+  renderDashboardChart();
+});
 
 tabs.forEach((tab) => {
   tab.addEventListener('click', () => {

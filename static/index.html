@@ -10,9 +10,6 @@
   </style>
 </head>
 <body>
-  <div class="background-orb orb-one"></div>
-  <div class="background-orb orb-two"></div>
-
   <main class="shell">
     <section class="hero card">
       <div>
@@ -29,6 +26,39 @@
     </section>
 
     <section class="grid">
+      <article class="card panel chart-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">Indicadores</p>
+            <h2>Reconhecimentos dos últimos 7 dias</h2>
+          </div>
+          <span class="mini-badge">dashboard</span>
+        </div>
+
+        <div class="metrics-grid" id="chartSummary">
+          <div class="summary-item">
+            <span class="label">Eventos</span>
+            <strong>0</strong>
+          </div>
+          <div class="summary-item">
+            <span class="label">Pessoas identificadas</span>
+            <strong>0</strong>
+          </div>
+          <div class="summary-item">
+            <span class="label">Não identificados</span>
+            <strong>0</strong>
+          </div>
+        </div>
+
+        <div class="chart-wrap">
+          <canvas id="recognitionChart" aria-label="Gráfico de reconhecimentos por dia" role="img"></canvas>
+        </div>
+        <div class="chart-legend">
+          <span><i class="legend-dot recognized-dot"></i>Identificados</span>
+          <span><i class="legend-dot unrecognized-dot"></i>Não identificados</span>
+        </div>
+      </article>
+
       <article class="card panel panel-accent">
         <div class="panel-head">
           <div>
