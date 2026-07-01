@@ -30,9 +30,25 @@
         <div class="panel-head">
           <div>
             <p class="eyebrow">Indicadores</p>
-            <h2>Reconhecimentos dos últimos 7 dias</h2>
+            <h2>Gráficos do dashboard</h2>
           </div>
           <span class="mini-badge">dashboard</span>
+        </div>
+
+        <div class="chart-filters">
+          <label class="field compact-field">
+            <span>Início</span>
+            <input id="chartStartDate" type="date" />
+          </label>
+          <label class="field compact-field">
+            <span>Fim</span>
+            <input id="chartEndDate" type="date" />
+          </label>
+          <div class="quick-range" aria-label="Atalhos de período">
+            <button class="range-button active" data-range="7" type="button">7 dias</button>
+            <button class="range-button" data-range="30" type="button">30 dias</button>
+            <button class="range-button" data-range="all" type="button">Tudo</button>
+          </div>
         </div>
 
         <div class="metrics-grid" id="chartSummary">
@@ -50,12 +66,42 @@
           </div>
         </div>
 
-        <div class="chart-wrap">
-          <canvas id="recognitionChart" aria-label="Gráfico de reconhecimentos por dia" role="img"></canvas>
+        <div class="charts-grid">
+          <div class="chart-box chart-box-large">
+            <div class="chart-title">
+              <strong>Eventos por dia</strong>
+              <span>Barras empilhadas</span>
+            </div>
+            <div class="chart-wrap">
+              <canvas id="recognitionChart" aria-label="Gráfico de reconhecimentos por dia" role="img"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-box">
+            <div class="chart-title">
+              <strong>Resultado</strong>
+              <span>Pizza</span>
+            </div>
+            <div class="chart-wrap chart-wrap-square">
+              <canvas id="recognitionPieChart" aria-label="Gráfico de pizza dos resultados" role="img"></canvas>
+            </div>
+          </div>
+
+          <div class="chart-box">
+            <div class="chart-title">
+              <strong>Pessoas mais vistas</strong>
+              <span>Ranking visual</span>
+            </div>
+            <div class="chart-wrap chart-wrap-square">
+              <canvas id="personChart" aria-label="Ranking de pessoas reconhecidas" role="img"></canvas>
+            </div>
+          </div>
         </div>
+
         <div class="chart-legend">
           <span><i class="legend-dot recognized-dot"></i>Identificados</span>
           <span><i class="legend-dot unrecognized-dot"></i>Não identificados</span>
+          <span><i class="legend-dot neutral-dot"></i>Sem rosto</span>
         </div>
       </article>
 

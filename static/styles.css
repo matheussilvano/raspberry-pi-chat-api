@@ -197,6 +197,7 @@ h2 {
   color: var(--muted);
 }
 
+input[type="date"],
 input[type="text"],
 input[type="file"] {
   width: 100%;
@@ -230,6 +231,7 @@ input[type="text"]::placeholder {
   color: #8e94a3;
 }
 
+input[type="date"]:focus,
 input[type="text"]:focus,
 input[type="file"]:focus {
   border-color: rgba(12, 128, 120, 0.52);
@@ -303,6 +305,51 @@ input[type="file"]:focus {
   gap: 0.75rem;
   grid-template-columns: repeat(2, minmax(160px, 1fr));
   margin-bottom: 1rem;
+}
+
+.chart-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(160px, 220px)) minmax(240px, 1fr);
+  gap: 0.75rem;
+  align-items: end;
+  margin-bottom: 1rem;
+}
+
+.compact-field {
+  gap: 0.35rem;
+}
+
+.compact-field input {
+  padding: 0.75rem 0.85rem;
+}
+
+.quick-range {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.range-button {
+  border: 1px solid rgba(12, 128, 120, 0.14);
+  border-radius: 999px;
+  background: #ffffff;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+  font-weight: 700;
+  padding: 0.75rem 1rem;
+  transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease;
+}
+
+.range-button:hover {
+  transform: translateY(-1px);
+}
+
+.range-button.active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #ffffff;
 }
 
 .metrics-grid {
@@ -416,10 +463,52 @@ input[type="file"]:focus {
   overflow: hidden;
 }
 
+.charts-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) repeat(2, minmax(220px, 0.8fr));
+  gap: 0.9rem;
+  align-items: stretch;
+}
+
+.chart-box {
+  min-width: 0;
+  padding: 1rem;
+  border: 1px solid rgba(16, 24, 40, 0.08);
+  border-radius: 8px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.96), rgba(248, 252, 252, 0.94));
+}
+
+.chart-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+.chart-title strong {
+  font-size: 0.98rem;
+}
+
+.chart-title span {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
 .chart-wrap canvas {
   display: block;
   width: 100%;
   height: 260px;
+}
+
+.chart-wrap-square {
+  min-height: 230px;
+}
+
+.chart-wrap-square canvas {
+  height: 230px;
 }
 
 .chart-legend {
@@ -451,6 +540,10 @@ input[type="file"]:focus {
   background: var(--accent);
 }
 
+.neutral-dot {
+  background: #9aa4b2;
+}
+
 @media (max-width: 920px) {
   .hero {
     grid-template-columns: 1fr;
@@ -467,6 +560,15 @@ input[type="file"]:focus {
 
   .metrics-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .chart-filters,
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .quick-range {
+    justify-content: flex-start;
   }
 }
 
@@ -502,6 +604,19 @@ input[type="file"]:focus {
   .summary-grid,
   .metrics-grid {
     grid-template-columns: 1fr;
+  }
+
+  .range-button {
+    flex: 1 1 auto;
+  }
+
+  .chart-box {
+    padding: 0.85rem;
+  }
+
+  .chart-title {
+    display: grid;
+    gap: 0.2rem;
   }
 
   .history-row {

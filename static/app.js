@@ -15,13 +15,22 @@ const historyRecognitions = document.getElementById('historyRecognitions');
 const historyPhotos = document.getElementById('historyPhotos');
 const historyFaces = document.getElementById('historyFaces');
 const recognitionChart = document.getElementById('recognitionChart');
+const recognitionPieChart = document.getElementById('recognitionPieChart');
+const personChart = document.getElementById('personChart');
 const chartSummary = document.getElementById('chartSummary');
+const chartStartDate = document.getElementById('chartStartDate');
+const chartEndDate = document.getElementById('chartEndDate');
+const rangeButtons = document.querySelectorAll('.range-button');
 const tabs = document.querySelectorAll('.tab');
 
 const state = {
   photos: [],
   faces: [],
   recognitions: [],
+  chartRange: {
+    start: null,
+    end: null,
+  },
 };
 
 function toBase64Payload(file) {
@@ -92,18 +101,107 @@ function formatDayKey(date) {
   return `${year}-${month}-${day}`;
 }
 
+function parseDateInput(value, endOfDay = false) {
+  if (!value) return null;
+  const [year, month, day] = value.split('-').map(Number);
+  if (!year || !month || !day) return null;
+  const date = new Date(year, month - 1, day);
+  date.setHours(endOfDay ? 23 : 0, endOfDay ? 59 : 0, endOfDay ? 59 : 0, endOfDay ? 999 : 0);
+  return date;
+}
+
+function setQuickRange(days) {
+  const end = new Date();
+  end.setHours(0, 0, 0, 0);
+  const start = new Date(end);
+  start.setDate(start.getDate() - (days - 1));
+
+  chartStartDate.value = formatDayKey(start);
+  chartEndDate.value = formatDayKey(end);
+  state.chartRange.start = parseDateInput(chartStartDate.value);
+  state.chartRange.end = parseDateInput(chartEndDate.value, true);
+}
+
+function setAllRange() {
+  if (!state.recognitions.length) {
+    setQuickRange(30);
+    return;
+  }
+
+  const dates = state.recognitions
+    .map((event) => new Date(event.created_at))
+    .filter((date) => !Number.isNaN(date.getTime()))
+    .sort((first, second) => first - second);
+
+  if (!dates.length) {
+    setQuickRange(30);
+    return;
+  }
+
+  chartStartDate.value = formatDayKey(dates[0]);
+  chartEndDate.value = formatDayKey(dates[dates.length - 1]);
+  state.chartRange.start = parseDateInput(chartStartDate.value);
+  state.chartRange.end = parseDateInput(chartEndDate.value, true);
+}
+
+function syncChartRangeFromInputs() {
+  state.chartRange.start = parseDateInput(chartStartDate.value);
+  state.chartRange.end = parseDateInput(chartEndDate.value, true);
+  if (state.chartRange.start && state.chartRange.end && state.chartRange.start > state.chartRange.end) {
+    chartEndDate.value = chartStartDate.value;
+    state.chartRange.end = parseDateInput(chartEndDate.value, true);
+  }
+}
+
+function setActiveRangeButton(range) {
+  rangeButtons.forEach((button) => {
+    button.classList.toggle('active', button.dataset.range === range);
+  });
+}
+
+function getFilteredRecognitions() {
+  return state.recognitions.filter((event) => {
+    const date = new Date(event.created_at);
+    if (Number.isNaN(date.getTime())) return false;
+    if (state.chartRange.start && date < state.chartRange.start) return false;
+    if (state.chartRange.end && date > state.chartRange.end) return false;
+    return true;
+  });
+}
+
+function getChartDays() {
+  const fallbackDays = getLastSevenDays();
+  const start = state.chartRange.start || fallbackDays[0];
+  const end = state.chartRange.end || fallbackDays[fallbackDays.length - 1];
+  const days = [];
+  const cursor = new Date(start);
+  cursor.setHours(0, 0, 0, 0);
+  const final = new Date(end);
+  final.setHours(0, 0, 0, 0);
+
+  while (cursor <= final && days.length < 62) {
+    days.push(new Date(cursor));
+    cursor.setDate(cursor.getDate() + 1);
+  }
+
+  return days.length ? days : fallbackDays;
+}
+
 function getRecognitionStats() {
-  const days = getLastSevenDays();
+  const filtered = getFilteredRecognitions();
+  const days = getChartDays();
   const buckets = days.map((date) => ({
     key: formatDayKey(date),
     label: date.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
     recognized: 0,
     unrecognized: 0,
+    noFace: 0,
   }));
   const bucketByKey = new Map(buckets.map((bucket) => [bucket.key, bucket]));
-  const totals = { events: 0, recognized: 0, unrecognized: 0 };
+  const totals = { events: 0, recognized: 0, unrecognized: 0, noFace: 0 };
+  const people = new Map();
 
-  state.recognitions.forEach((event) => {
+  filtered.forEach((event) => {
     const date = new Date(event.created_at);
     if (Number.isNaN(date.getTime())) return;
 
@@ -117,13 +215,27 @@ function getRecognitionStats() {
     const hasNoFace = faces.length === 0 ? 1 : 0;
 
     bucket.recognized += recognizedCount;
-    bucket.unrecognized += unrecognizedCount + hasNoFace;
+    bucket.unrecognized += unrecognizedCount;
+    bucket.noFace += hasNoFace;
     totals.events += 1;
     totals.recognized += recognizedCount;
-    totals.unrecognized += unrecognizedCount + hasNoFace;
+    totals.unrecognized += unrecognizedCount;
+    totals.noFace += hasNoFace;
+
+    faces
+      .filter((face) => face.status === 'recognized' && face.name)
+      .forEach((face) => {
+        people.set(face.name, (people.get(face.name) || 0) + 1);
+      });
   });
 
-  return { buckets, totals };
+  return {
+    buckets,
+    totals,
+    people: Array.from(people, ([name, count]) => ({ name, count }))
+      .sort((first, second) => second.count - first.count)
+      .slice(0, 5),
+  };
 }
 
 function renderChartSummary(totals) {
@@ -138,28 +250,32 @@ function renderChartSummary(totals) {
     </div>
     <div class="summary-item">
       <span class="label">Não identificados</span>
-      <strong>${totals.unrecognized}</strong>
+      <strong>${totals.unrecognized + totals.noFace}</strong>
     </div>
   `;
 }
 
-function drawRecognitionChart(buckets) {
-  const canvas = recognitionChart;
+function prepareCanvas(canvas, minWidth = 320, minHeight = 220) {
   const context = canvas.getContext('2d');
   const rect = canvas.getBoundingClientRect();
   const ratio = window.devicePixelRatio || 1;
-  const width = Math.max(320, rect.width);
-  const height = Math.max(220, rect.height);
+  const width = Math.max(minWidth, rect.width);
+  const height = Math.max(minHeight, rect.height);
 
   canvas.width = Math.round(width * ratio);
   canvas.height = Math.round(height * ratio);
   context.setTransform(ratio, 0, 0, ratio, 0, 0);
   context.clearRect(0, 0, width, height);
 
+  return { context, width, height };
+}
+
+function drawRecognitionChart(buckets) {
+  const { context, width, height } = prepareCanvas(recognitionChart);
   const padding = { top: 18, right: 16, bottom: 42, left: 34 };
   const chartWidth = width - padding.left - padding.right;
   const chartHeight = height - padding.top - padding.bottom;
-  const dataMax = Math.max(0, ...buckets.map((bucket) => bucket.recognized + bucket.unrecognized));
+  const dataMax = Math.max(0, ...buckets.map((bucket) => bucket.recognized + bucket.unrecognized + bucket.noFace));
   const maxValue = Math.max(1, dataMax);
   const yValues = dataMax <= 1
     ? [0, 1]
@@ -184,40 +300,133 @@ function drawRecognitionChart(buckets) {
   });
 
   buckets.forEach((bucket, index) => {
-    const total = bucket.recognized + bucket.unrecognized;
+    const total = bucket.recognized + bucket.unrecognized + bucket.noFace;
     const x = padding.left + index * (barWidth + barGap);
     const baseY = padding.top + chartHeight;
     const recognizedHeight = (bucket.recognized / maxValue) * chartHeight;
     const unrecognizedHeight = (bucket.unrecognized / maxValue) * chartHeight;
+    const noFaceHeight = (bucket.noFace / maxValue) * chartHeight;
 
     context.fillStyle = 'rgba(12, 128, 120, 0.18)';
     context.fillRect(x, padding.top, barWidth, chartHeight);
 
+    context.fillStyle = '#9aa4b2';
+    context.fillRect(x, baseY - noFaceHeight, barWidth, noFaceHeight);
+
     context.fillStyle = '#d84c5f';
-    context.fillRect(x, baseY - unrecognizedHeight, barWidth, unrecognizedHeight);
+    context.fillRect(x, baseY - noFaceHeight - unrecognizedHeight, barWidth, unrecognizedHeight);
 
     context.fillStyle = '#0c8078';
-    context.fillRect(x, baseY - unrecognizedHeight - recognizedHeight, barWidth, recognizedHeight);
+    context.fillRect(x, baseY - noFaceHeight - unrecognizedHeight - recognizedHeight, barWidth, recognizedHeight);
 
     if (total > 0) {
       context.fillStyle = '#182033';
       context.textAlign = 'center';
       context.textBaseline = 'bottom';
       context.font = '700 12px "Plus Jakarta Sans", sans-serif';
-      context.fillText(total, x + barWidth / 2, baseY - unrecognizedHeight - recognizedHeight - 6);
+      context.fillText(total, x + barWidth / 2, baseY - noFaceHeight - unrecognizedHeight - recognizedHeight - 6);
     }
 
     context.fillStyle = '#667085';
     context.textBaseline = 'top';
     context.font = '12px "Plus Jakarta Sans", sans-serif';
-    context.fillText(bucket.label, x + barWidth / 2, baseY + 12);
+    if (buckets.length <= 16 || index % Math.ceil(buckets.length / 12) === 0) {
+      context.fillText(bucket.label, x + barWidth / 2, baseY + 12);
+    }
+  });
+}
+
+function drawDonutChart(totals) {
+  const { context, width, height } = prepareCanvas(recognitionPieChart, 220, 220);
+  const values = [
+    { label: 'Identificados', value: totals.recognized, color: '#0c8078' },
+    { label: 'Não identificados', value: totals.unrecognized, color: '#d84c5f' },
+    { label: 'Sem rosto', value: totals.noFace, color: '#9aa4b2' },
+  ];
+  const total = values.reduce((sum, item) => sum + item.value, 0);
+  const centerX = width / 2;
+  const centerY = height / 2;
+  const radius = Math.min(width, height) * 0.34;
+  let angle = -Math.PI / 2;
+
+  if (!total) {
+    context.beginPath();
+    context.arc(centerX, centerY, radius, 0, Math.PI * 2);
+    context.strokeStyle = 'rgba(12, 128, 120, 0.22)';
+    context.lineWidth = radius * 0.42;
+    context.stroke();
+  } else {
+    values.forEach((item) => {
+      if (!item.value) return;
+      const slice = (item.value / total) * Math.PI * 2;
+      context.beginPath();
+      context.moveTo(centerX, centerY);
+      context.arc(centerX, centerY, radius, angle, angle + slice);
+      context.closePath();
+      context.fillStyle = item.color;
+      context.fill();
+      angle += slice;
+    });
+  }
+
+  context.beginPath();
+  context.arc(centerX, centerY, radius * 0.58, 0, Math.PI * 2);
+  context.fillStyle = '#ffffff';
+  context.fill();
+
+  context.fillStyle = '#182033';
+  context.textAlign = 'center';
+  context.textBaseline = 'middle';
+  context.font = '800 30px "Plus Jakarta Sans", sans-serif';
+  context.fillText(String(total), centerX, centerY - 8);
+  context.fillStyle = '#667085';
+  context.font = '12px "Plus Jakarta Sans", sans-serif';
+  context.fillText('resultados', centerX, centerY + 20);
+}
+
+function drawPersonChart(people) {
+  const { context, width, height } = prepareCanvas(personChart, 220, 220);
+  const rows = people.length
+    ? people
+    : [
+        { name: 'Sem dados', count: 0 },
+        { name: 'Aguardando', count: 0 },
+        { name: 'Reconhecimentos', count: 0 },
+      ];
+  const maxValue = Math.max(1, ...rows.map((item) => item.count));
+  const padding = { top: 18, right: 18, bottom: 18, left: 18 };
+  const rowHeight = (height - padding.top - padding.bottom) / rows.length;
+
+  rows.forEach((item, index) => {
+    const y = padding.top + index * rowHeight;
+    const barWidth = ((width - padding.left - padding.right) * item.count) / maxValue;
+
+    context.fillStyle = 'rgba(12, 128, 120, 0.1)';
+    context.fillRect(padding.left, y + 30, width - padding.left - padding.right, 12);
+
+    context.fillStyle = item.count ? '#0c8078' : '#c9d4d2';
+    context.fillRect(padding.left, y + 30, barWidth, 12);
+
+    context.fillStyle = '#182033';
+    context.textAlign = 'left';
+    context.textBaseline = 'middle';
+    context.font = '700 13px "Plus Jakarta Sans", sans-serif';
+    context.fillText(item.name.slice(0, 22), padding.left, y + 16);
+
+    context.fillStyle = '#667085';
+    context.textAlign = 'right';
+    context.font = '700 13px "Plus Jakarta Sans", sans-serif';
+    context.fillText(String(item.count), width - padding.right, y + 16);
   });
 }
 
 function renderDashboardChart() {
-  const { buckets, totals } = getRecognitionStats();
+  syncChartRangeFromInputs();
+  const { buckets, totals, people } = getRecognitionStats();
   renderChartSummary(totals);
   drawRecognitionChart(buckets);
+  drawDonutChart(totals);
+  drawPersonChart(people);
 }
 
 function renderLatestRecognition() {
@@ -388,6 +597,31 @@ registerForm.addEventListener('submit', async (event) => {
 
 refreshAllBtn.addEventListener('click', loadData);
 
+chartStartDate.addEventListener('change', () => {
+  setActiveRangeButton('');
+  renderDashboardChart();
+});
+
+chartEndDate.addEventListener('change', () => {
+  setActiveRangeButton('');
+  renderDashboardChart();
+});
+
+rangeButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const range = button.dataset.range;
+    setActiveRangeButton(range);
+
+    if (range === 'all') {
+      setAllRange();
+    } else {
+      setQuickRange(Number(range));
+    }
+
+    renderDashboardChart();
+  });
+});
+
 window.addEventListener('resize', () => {
   renderDashboardChart();
 });
@@ -403,6 +637,8 @@ tabs.forEach((tab) => {
     historyFaces.classList.toggle('hidden', target !== 'faces');
   });
 });
+
+setQuickRange(7);
 
 loadData().catch((error) => {
   recognitionResult.innerHTML = `<div class="error"><strong>Erro ao carregar dashboard:</strong> ${escapeHtml(error.message)}</div>`;
